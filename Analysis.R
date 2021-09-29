@@ -65,18 +65,14 @@ physeqall <- merge_phyloseq(physeq_clean1, physeq_clean2)
 #extract the asv table from the phyloseq
 asv.table <- data.frame(physeqall@otu_table)
 
-###FILTERING:remove ASV with low representation
-##Remove samples with less than 10000 reads for the COUNT TABLE
+########### DIVERSITY ANALYSIS (hilldiv) #########
+##Remove samples with less than 10000 reads for the count table
 library(hilldiv)
 counts_filtdepth <- depth_filt(asv.table,10000)
 col_asv.table <- colnames(asv.table)
 col_counts_filtdepth <- colnames(counts_filtdepth)
 #colnames of samples remove for filtering, check for equality
 samples_out <- setdiff(col_asv.table, col_counts_filtdepth)
-
-#Delete samples filtered out from ASVs_count after filtering
-physeq_filtered <- prune_samples(col_counts_filtdepth, physeq_no_blanks_no_zero)
-physeq_filtered <- prune_taxa(taxa_sums(physeq_filtered)>0, physeq_filtered)
 
 ##Remove all OTUs with less copies than 0.01% of the total number of reads of each sample
 counts_filtcopy <- copy_filt(counts_filtdepth, 0.0001)
@@ -85,19 +81,19 @@ row.filtcopy <- row.names(counts_filtcopy)
 #asvs remove after filtering
 asv_out <- setdiff(row.filtered, row.filtcopy)
 
-
+#new phyloseq
 count_phy <- otu_table(counts_filtcopy, taxa_are_rows=T)
 physeq = phyloseq(count_phy, TAX, sample_info_tab_phy)
 
 ###TAXONOMY filtering
-##Remove ASVs identified as Eukaryota or Archaea, and Bacteria lacking Phylum info in the TAXONOMY file
+##Remove ASVs identified as Eukaryota or Archaea, and Bacteria lacking Phylum info in the taxonomy file
 physeqall_bacteria <- subset_taxa(physeq, Kingdom =="Bacteria")
 physeqall_phylum <- subset_taxa(physeqall_bacteria, Phylum != "NA")
 physeqall_class <- subset_taxa(physeqall_phylum, Class != "NA")
 
 
 
-#### Bar plot: gut microbiota diversity of all bats
+########### Bar plot: gut microbiota diversity of all bats #########
 pseq.rel <- microbiome::transform(physeqall_class, "compositional")
 physeqall.comp.rare <- aggregate_rare(pseq.rel, level = "Phylum", detection = 0.1/100, prevalence = 20/100, include.lowest = TRUE)
 
@@ -328,13 +324,3 @@ x = sort(x, TRUE)
 sigtab_diagdds.ins.fis_with_tax$Genus = factor(as.character(sigtab_diagdds.ins.fis_with_tax$Genus), levels=names(x))
 ggplot(sigtab_diagdds.ins.fis_with_tax, aes(x=Genus, y=log2FoldChange, color=Phylum)) + geom_point(size=6) + 
   theme(axis.text.x = element_text(angle = -90, hjust = 0, vjust=0.5)) + geom_hline(yintercept=0) + coord_flip()
-
-
-
-
-
-
-
-
-
-
